@@ -1,0 +1,37 @@
+[project]
+name = "simulator"
+version = "0.1.0"
+description = "Builds measured fakes of REST APIs and tests AI agents on them."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "hypothesis",  # property checks (section 11)
+    "pyright",     # strict type checking (section 11)
+    "pytest",      # tests (section 11)
+    "ruff",        # lint and format (section 11)
+]
+
+[build-system]
+requires = ["uv_build>=0.12,<0.13"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.pyright]
+include = ["src", "tests"]
+typeCheckingMode = "strict"
+pythonVersion = "3.14"
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--import-mode=importlib"]

@@ -1,0 +1,6 @@
+#!/bin/sh
+# Refuses a commit when the staged changes contain a secret (a key, a password).
+# Git runs this before every commit once the clone has: git config core.hooksPath .githooks
+# The settings file sits next to this folder, so the hook works from any working folder.
+settings="$(dirname "$0")/../.gitleaks.toml"
+exec gitleaks git --pre-commit --staged --redact --verbose --config "$settings"

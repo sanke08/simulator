@@ -1,0 +1,14 @@
+# Real keys live only here and are never committed (Simulator.md 5.16).
+.env
+
+# Local state: fetched description files, clean-state copies of reference systems
+# (they hold secrets), the model cache and compare reports. See docs/PLAN.md 0.7.
+var/
+
+# Python and tool caches.
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+dist/

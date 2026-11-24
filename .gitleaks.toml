@@ -1,0 +1,16 @@
+# Secret scan settings, read by .githooks/pre-commit.
+# gitleaks' default rules, plus one rule for the keys our reference systems issue.
+
+[extend]
+useDefault = true
+
+# Reference systems (Gitea first) issue access keys of 40 hexadecimal characters.
+# The default "generic-api-key" rule catches such a key only when it looks random enough
+# (an entropy score above 3.5; a random key scores about 3.7), so a less random key could
+# slip through. This rule matches the assignment itself, whatever the score.
+[[rules]]
+id = "hex-access-token"
+description = "A 40-hex access key assigned to a *_TOKEN or *_KEY name"
+regex = '''(?i)[a-z0-9_]*(?:token|key)\s*[=:]\s*["']?([0-9a-f]{40})\b'''
+secretGroup = 1
+keywords = ["token", "key"]
