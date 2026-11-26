@@ -23,9 +23,12 @@ material.
 
 ## Rules
 
-- **One step at a time**, in the order in `docs/PLAN.md`. A step is done only when it
-  runs, its tests pass, and the Progress section is updated. Then stop for the author's
-  OK before the next step.
+- **One step at a time**, in the order in `docs/PLAN.md`. A step is done when it runs,
+  it has been checked by hand through the real command, and the Progress section is
+  updated. Then stop for the author's OK before the next step.
+- **Build first, tests later.** Do not write automated tests (pytest files) while
+  building features. They are written in a separate testing pass, when the author asks.
+  Until then each step is checked by running its real command on real input.
 - **Simulator is general. No platform code or files in this repository.** Nothing in
   the repository names or configures a specific platform (Gitea, GitHub, Slack, ...):
   no adapter files, compose files, checks or downloaded description files for one
@@ -35,9 +38,10 @@ material.
   (Gitea is the first). Where that platform's settings live is decided at that step,
   with the author, and recorded under Decisions.
 - **No placeholder or dummy code.** A file, function, field, flag or folder appears in
-  the step that uses it. No code written only for a test or for a later step. Tests run
-  the real thing (real Gitea, real gitleaks, real files); a test double is allowed only
-  where the spec asks for one, and its reason is written next to it.
+  the step that uses it. No code written only for a test or for a later step. When tests
+  are written, they run the real thing (real platform, real gitleaks, real files); a test
+  double is allowed only where the spec asks for one, and its reason is written next to
+  it.
 - **The layout is fixed.** `docs/PLAN.md` section 0.5 is the layout. Files are added
   inside it; nothing is moved or renamed without the author's yes.
 - **Decisions before dependent code.** A choice the spec leaves open is written under
@@ -49,8 +53,8 @@ material.
 - **Ask before anything big or new:** installing software, starting Docker, deleting
   files.
 - **Services start only when needed.** Never start Docker Desktop, a container or any
-  other service ahead of time. Write a step's code and its Docker-free tests first; ask
-  just before the first command that needs a running service; stop it again afterwards.
+  other service ahead of time. Write a step's code first; ask just before the first
+  command that needs a running service; stop it again afterwards.
 
 ## Working with the author
 
@@ -69,6 +73,9 @@ material.
   tricks.
 - **Names are full words, by purpose, as short as clear:** `reset_reference`, not
   `rst_ref`; `admin_key`, not `tok`. A name does not repeat its module.
+- **File and folder names say what they are for**, so a reader understands them from the
+  name alone: `command_line.py`, not `cli.py`; `examples/api-descriptions/`, not
+  `fixtures/`; `task-tracker-openapi-3.0.json`, not `tasks.json`.
 - **One source of truth.** Every value (number, name, path, default, list) and every type
   is defined once and imported everywhere else. Tests are the exception: they write
   expected values as literals on purpose.

@@ -4,7 +4,12 @@ version = "0.1.0"
 description = "Builds measured fakes of REST APIs and tests AI agents on them."
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "typer",  # the command line (Simulator.md section 11)
+]
+
+[project.scripts]
+simulator = "simulator.command_line:app"
 
 [dependency-groups]
 dev = [

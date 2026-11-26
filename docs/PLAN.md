@@ -19,8 +19,13 @@ Decided before any code was written. They do not change without a recorded decis
 
 ### 0.1 Project rules
 
-- **One step at a time.** A step is done when it runs, its tests pass, and Progress says
-  so. Then the author gives the OK for the next one.
+- **One step at a time.** A step is done when it runs, it has been checked by hand
+  through its real command, and Progress says so. Then the author gives the OK for the
+  next one.
+- **Build first, tests later.** No automated tests are written while features are built.
+  Each step's "Verify" line is checked by hand by running the real command on real input.
+  The automated tests the steps name are written in a separate testing pass, when the
+  author asks for it.
 - **Build feature by feature.** Every step is a real, lasting slice. No placeholder code:
   a file, function, field, flag or folder appears in the step that uses it. No
   planned-broken states. If two mechanisms only make sense together, they are one step.
@@ -60,7 +65,7 @@ error messages a user can act on.
      |  and its description file
      |
      +--> reference.py : start / health / reset / stop a reference, from its settings
-     +--> description.py : description file -> common form
+     +--> api_description.py : description file -> common form
      +--> compare.py : runs one check on two sides, maps ids and keys, normalises, reports
      |
      +------------------------+---------------------------+
@@ -101,8 +106,8 @@ simulator/
   .gitignore .gitleaks.toml .githooks/pre-commit
   src/simulator/             the generic core, one module per job, README first
     README.md
-    cli.py                   Typer app: load, compare, ref
-    description.py           Swagger 2.0 / OpenAPI 3.x -> common form
+    command_line.py          the `simulator` command (Typer): load, compare, ref
+    api_description.py       reads an API description file into the common form
     checks.py                the check file format and its loading
     normalise.py             what always differs: ids, times, tokens, base address, order
     compare.py               runs checks on two sides; mapping, retry, report
@@ -110,10 +115,12 @@ simulator/
     settings.py              reads one platform's declared settings (0.5)
     reference.py             start, health check, reset, stop; timing and read-back (0.5)
     roles.py                 role users and their keys, once per session (0.6)
-  tests/
+  examples/
+    api-descriptions/        sample description files of a made-up task tracker, written
+                             by us in each format, for trying `simulator load` by hand
+  tests/                     written in the later testing pass
     unit/                    pure code: loader, normalise, mapping, property 11, boundary
     integration/             the platform check (0.5 to 0.8)
-    fixtures/                small description samples written by us (never vendor text)
   var/                       git-ignored local state
 ```
 
@@ -192,7 +199,7 @@ built. Steps 0.5 to 0.8 are the platform check: the finished features are pointe
 real platform (Gitea first), whose settings live outside this repository.
 
 **Step 0.2: Description loader and `simulator load`.**
-`description.py` reads a description file in Swagger 2.0, OpenAPI 3.0 or OpenAPI 3.1 into
+`api_description.py` reads a description file in Swagger 2.0, OpenAPI 3.0 or OpenAPI 3.1 into
 one common form. Per endpoint: `id` (method + path), `name` (operationId), `kind` (the
 last fixed path part), `writes` (any method but GET/HEAD/OPTIONS), path and query
 parameters, body schema, replies by status (JSON Schema with references resolved;
@@ -202,10 +209,11 @@ security requirements). An endpoint that does not send and receive JSON is marke
 simulated". `simulator load FILE [--endpoint ID] [--json]` takes the path of any
 description file. `src/simulator/README.md` is written first.
 Example: with our own small sample of a task-tracker API,
-`simulator load tests/fixtures/tasks-openapi-3.0.json --endpoint "POST /projects/{project}/tasks"`
+`simulator load examples/api-descriptions/task-tracker-openapi-3.0.json --endpoint "POST /projects/{project}/tasks"`
 prints `name createTask, kind tasks, writes yes, needs key yes, body NewTask, replies 201
-Task, 404, 422`; its file-download endpoint is marked "not simulated".
-Verify: our own small sample in each format (`tests/fixtures/`, the same task-tracker API
+Task, 404 Error, 422 ValidationError`; its file-download endpoint is marked "not
+simulated".
+Verify: our own small sample in each format (`examples/api-descriptions/`, the same task-tracker API
 written as Swagger 2.0, OpenAPI 3.0 and OpenAPI 3.1) loads to the same expected common
 form; `simulator load` prints the counts of endpoints and "not simulated" endpoints. The
 loader is checked on a real platform's description file in step 0.5.
@@ -345,7 +353,8 @@ property check 11 passes, and the three numbers are printed and recorded in Prog
    folder, write that folder's `README.md` first.
 2. Record any decision the step depends on under Decisions.
 3. Write the code with the rules in `CLAUDE.md`. Add nothing the step does not use.
-4. Write the tests named in "Verify". Run ruff, pyright and pytest.
+4. Check it by hand: run the real command on real input, as the "Verify" line says. Run
+   ruff and pyright. (Automated tests come in the later testing pass.)
 5. Show the author the result. Update Progress and `README.md`. The author commits by
    hand. Wait for the OK before the next step.
 
@@ -353,11 +362,12 @@ property check 11 passes, and the three numbers are printed and recorded in Prog
 
 1. One feature, describable in one sentence.
 2. Decisions it depends on are recorded before its code.
-3. Tests run the real thing; error paths are tested, not only the happy path.
+3. Checked by hand through the real command, error paths included, not only the happy
+   path.
 4. Integrated through the real entry point (the CLI), never a test-only path.
 5. No dummy code, no TODOs, nothing that exists only for a later step.
 6. Nothing under `src/` names an API; nothing secret outside `.env` and `var/`.
-7. ruff, pyright strict and pytest clean; Docker left with no stray containers or volumes.
+7. ruff and pyright strict clean; Docker left with no stray containers or volumes.
 8. Progress, `README.md` and the folder README updated in the same piece of work.
 
 ---
@@ -366,8 +376,8 @@ property check 11 passes, and the three numbers are printed and recorded in Prog
 
 Updated at the end of every step. A new session reads this first.
 
-**Current step:** 0.2, the description loader (not started). Docker is not needed
-until step 0.5.
+**Current step:** 0.3, the comparison engine (not started). Docker is not needed until
+step 0.5.
 
 **Done:**
 - 0.1 (2026-11-24): setup only. `git init` (branch `main`, no commits). uv project on
@@ -383,6 +393,23 @@ until step 0.5.
   repository using this hook, a random 40-hex key is refused and a notes file commits;
   gitleaks' default rules alone miss a low-randomness 40-hex key and ours catch it;
   `git check-ignore` confirms `.env` and `var/` are ignored.
+
+- 0.2 (2026-11-25): description loader and `simulator load`. `src/simulator/README.md`
+  (written first), `api_description.py` (`load_description`: file checks, format detection,
+  one reader for Swagger 2.0 and one for OpenAPI 3.x, and `SchemaCleaner`, which follows
+  references, keeps self-containing schemas in `defs`, writes "can be null" and exclusive
+  bounds one way, and drops non-shape keys), `command_line.py` (`simulator load FILE
+  [--endpoint ID] [--json]`; errors print a sentence and exit 1, as `{"error": ...}` with
+  `--json`). typer added. Samples in `examples/api-descriptions/`: one task-tracker API (8
+  endpoints, including a self-containing Task, nullable fields, an exclusive bound, a
+  public endpoint, a file upload and a file download) written by us in all three formats.
+  Found while comparing them: Swagger 2.0 cannot give one reply its own media type, so
+  its `produces` is read as covering successful replies only (Decisions). Checked by hand
+  (no automated tests, by the author's rule): ruff and pyright report no problems; all
+  three samples load to the same common form apart from their format; `simulator load`
+  prints the summary, one endpoint as text and as JSON, and the whole common form as
+  JSON; an unknown endpoint and a missing file print a sentence and exit with 1. Not
+  yet checked on a real platform's description file: that is step 0.5.
 
 **Facts checked (2026-11-24):**
 - Gitea's latest release is v28.4.0 (2026-11-15); Gitea moved from 1.x to 28.x numbering
@@ -403,6 +430,40 @@ its two description files and the `info.version` it reports (0.5); Gitea's error
 fields and which lists promise an order (0.7).
 
 **Decisions (date, what, why):**
+- 2026-11-25: **Names say what a file or folder is for.** The author's rule. Renamed:
+  `tests/fixtures/` to `examples/api-descriptions/` (they are sample input, not tests),
+  `tasks-*.json` to `task-tracker-<format>.json`, `cli.py` to `command_line.py` and
+  `description.py` to `api_description.py`.
+- 2026-11-25: **Build first, tests later.** The author's choice: features are built and
+  checked by hand through their real commands; no automated tests are written until a
+  separate testing pass the author asks for. The pytest files written in step 0.2 were
+  removed. The sample description files in `examples/api-descriptions/` are kept: they are real
+  input for checking `simulator load` by hand.
+- 2026-11-25: **Step 0.2 loader details**, recorded before its code.
+  - **JSON files only.** Description files are read as JSON; a YAML file is refused with
+    a clear message. Reading YAML needs a library section 11 does not list; it is added
+    by a recorded decision when a platform needs it.
+  - **Size limit for this untrusted input: 20 MB.** Large real files are about 1 MB.
+  - **Shape only.** The common form keeps what describes the shape of data. It drops
+    vendor extensions (`x-...` keys), examples (`example`, `examples`) and documentation
+    keys (`xml`, `externalDocs`, `discriminator`); none of them changes which data is
+    valid.
+  - **One way to say each thing.** "Can be null" (`nullable: true`, `x-nullable: true`,
+    `type: [T, "null"]`) becomes `type: [T, "null"]`. An exclusive bound written the old
+    way (`minimum: 0, exclusiveMinimum: true`) becomes the new way (`exclusiveMinimum: 0`).
+  - **References are replaced by what they point to**, and each schema that came from a
+    named definition gets that name as its `title` when it has none, so a reader still
+    sees "Task" rather than a bare object. A schema that contains itself (a task with
+    subtasks) is kept once under `$defs` and pointed to with `$ref`.
+  - **"Not simulated"** when the request body is not JSON (a form or a file upload) or a
+    reply with a body is not JSON (a file download, plain text).
+  - **Swagger 2.0's `produces` covers the successful replies only.** Swagger 2.0 states
+    one media type per endpoint, so a file download's 404 would read as a file too;
+    OpenAPI 3 gives each reply its own. Error replies (4xx, 5xx, `default`) with a schema
+    are read as JSON, which is how real APIs send errors. Found while comparing the three
+    sample files.
+  - **The common form is plain frozen dataclasses**, printed as JSON with `--json`. It is
+    not saved to a file yet, so it needs no pydantic model or format version until then.
 - 2026-11-25: **No platform code or files in this repository.** Simulator is a general
   tool; Gitea is only the first platform it is checked against. Features are built
   generically first (0.2 to 0.4); the platform check comes after (0.5 to 0.8). The

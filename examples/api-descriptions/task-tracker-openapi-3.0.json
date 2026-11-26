@@ -1,0 +1,204 @@
+{
+  "openapi": "3.0.3",
+  "info": {"title": "Task tracker", "version": "1.0.0"},
+  "servers": [{"url": "/api"}],
+  "security": [{"Token": []}],
+  "paths": {
+    "/status": {
+      "get": {
+        "operationId": "getStatus",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "The service is up.",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Status"}}}
+          }
+        }
+      }
+    },
+    "/projects": {
+      "get": {
+        "operationId": "listProjects",
+        "parameters": [
+          {"name": "page", "in": "query", "description": "Page number.", "schema": {"type": "integer", "minimum": 1}},
+          {"name": "limit", "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": 50}}
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of projects.",
+            "content": {
+              "application/json": {
+                "schema": {"type": "array", "items": {"$ref": "#/components/schemas/Project"}}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project}/tasks": {
+      "parameters": [{"$ref": "#/components/parameters/ProjectParam"}],
+      "get": {
+        "operationId": "listTasks",
+        "parameters": [
+          {"name": "state", "in": "query", "schema": {"type": "string", "enum": ["open", "closed"]}}
+        ],
+        "responses": {
+          "200": {
+            "description": "The project's tasks.",
+            "content": {
+              "application/json": {
+                "schema": {"type": "array", "items": {"$ref": "#/components/schemas/Task"}}
+              }
+            }
+          },
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      },
+      "post": {
+        "operationId": "createTask",
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/NewTask"}}}
+        },
+        "responses": {
+          "201": {
+            "description": "The new task.",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Task"}}}
+          },
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "422": {
+            "description": "The task is not valid.",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ValidationError"}}}
+          }
+        }
+      }
+    },
+    "/projects/{project}/tasks/{task}": {
+      "parameters": [
+        {"$ref": "#/components/parameters/ProjectParam"},
+        {"name": "task", "in": "path", "required": true, "schema": {"type": "integer"}}
+      ],
+      "get": {
+        "operationId": "getTask",
+        "responses": {
+          "200": {
+            "description": "The task.",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Task"}}}
+          },
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      },
+      "delete": {
+        "operationId": "deleteTask",
+        "responses": {
+          "204": {"description": "Deleted."},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
+    "/projects/{project}/files": {
+      "parameters": [{"$ref": "#/components/parameters/ProjectParam"}],
+      "post": {
+        "operationId": "uploadFile",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {"upload": {"type": "string", "format": "binary"}}
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The stored file.",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Attachment"}}}
+          }
+        }
+      }
+    },
+    "/projects/{project}/files/{file}": {
+      "parameters": [
+        {"$ref": "#/components/parameters/ProjectParam"},
+        {"name": "file", "in": "path", "required": true, "schema": {"type": "string"}}
+      ],
+      "get": {
+        "operationId": "downloadFile",
+        "responses": {
+          "200": {
+            "description": "The file's bytes.",
+            "content": {"application/octet-stream": {"schema": {"type": "string", "format": "binary"}}}
+          },
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "Token": {"type": "apiKey", "in": "header", "name": "Authorization"}
+    },
+    "parameters": {
+      "ProjectParam": {"name": "project", "in": "path", "required": true, "schema": {"type": "string"}}
+    },
+    "responses": {
+      "NotFound": {
+        "description": "Not found.",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
+      }
+    },
+    "schemas": {
+      "Status": {
+        "type": "object",
+        "properties": {"ok": {"type": "boolean"}}
+      },
+      "Project": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {"type": "integer", "format": "int64"},
+          "name": {"type": "string", "x-go-name": "Name"}
+        }
+      },
+      "Task": {
+        "type": "object",
+        "required": ["id", "title", "state"],
+        "properties": {
+          "id": {"type": "integer", "format": "int64"},
+          "title": {"type": "string", "example": "Fix login"},
+          "state": {"type": "string", "enum": ["open", "closed"]},
+          "due_date": {"type": "string", "format": "date-time", "nullable": true},
+          "priority": {"type": "integer", "minimum": 0, "exclusiveMinimum": true},
+          "subtasks": {"type": "array", "items": {"$ref": "#/components/schemas/Task"}}
+        },
+        "x-go-package": "tasks/models"
+      },
+      "NewTask": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": {"type": "string", "minLength": 1},
+          "due_date": {"type": "string", "format": "date-time", "nullable": true},
+          "priority": {"type": "integer", "minimum": 0, "exclusiveMinimum": true}
+        }
+      },
+      "Attachment": {
+        "type": "object",
+        "properties": {"id": {"type": "integer"}, "name": {"type": "string"}}
+      },
+      "Error": {
+        "type": "object",
+        "properties": {"message": {"type": "string"}}
+      },
+      "ValidationError": {
+        "type": "object",
+        "properties": {
+          "message": {"type": "string"},
+          "fields": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}
